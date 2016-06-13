@@ -55,10 +55,12 @@ class UserDAO:
         try:
             # XXX HW 2.3 Students Work Here
             # you will need to retrieve right document from the users collection.
-            print("This space intentionally left blank.")
-            users.find_one({'_id':username})
+            print "This space intentionally left blank."
+            #users.find_one({'_id':username})
+            user = self.users.find_one({'_id':username})
+            print user 
         except:
-            print("Unable to query database for user")
+            print "Unable to query database for user"
 
         if user is None:
             print("User not in database")
@@ -67,7 +69,7 @@ class UserDAO:
         salt = user['password'].split(',')[1]
 
         if user['password'] != self.make_pw_hash(password, salt):
-            print("user password is not a match")
+            print "user password is not a match"
             return None
 
         # Looks good
@@ -86,16 +88,19 @@ class UserDAO:
             # XXX HW 2.3 Students work here
             # You need to insert the user into the users collection.
             # Don't over think this one, it's a straight forward insert.
+            
             #db.users.insert_one(user)
-            users.insert_one(user)
+            #users.insert_one(user)
+            #self.insert_one(user)
+            self.users.insert_one(user)
 
-            print("This space intentionally left blank.")
+            print "This space intentionally left blank."
 
         except pymongo.errors.OperationFailure:
-            print("oops, mongo error")
+            print "oops, mongo error"
             return False
         except pymongo.errors.DuplicateKeyError as e:
-            print("oops, username is already taken")
+            print "oops, username is already taken"
             return False
 
         return True
