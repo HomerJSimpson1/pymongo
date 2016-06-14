@@ -56,7 +56,7 @@ class BlogPostDAO:
             # XXX HW 3.2 Work Here to insert the post
             self.db.posts.insert_one(post)
             print "Inserting the post"
-            self.posts.insert_one(post)
+            # self.posts.insert_one(post)
         except:
             print "Error inserting post"
             print "Unexpected error:", sys.exc_info()[0]
@@ -69,7 +69,7 @@ class BlogPostDAO:
         cursor = iter(())  # Using an empty itable for a placeholder so blog compiles before you make your changes
 
         # XXX HW 3.2 Work here to get the posts
-        cursor = self.db.posts.find_many()
+        cursor = self.db.posts.find()
         l = []
 
         for post in cursor:

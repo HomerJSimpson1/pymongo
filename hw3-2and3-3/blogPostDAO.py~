@@ -54,7 +54,9 @@ class BlogPostDAO:
         # now insert the post
         try:
             # XXX HW 3.2 Work Here to insert the post
+            self.db.posts.insert_one(post)
             print "Inserting the post"
+            self.posts.insert_one(post)
         except:
             print "Error inserting post"
             print "Unexpected error:", sys.exc_info()[0]
@@ -67,7 +69,7 @@ class BlogPostDAO:
         cursor = iter(())  # Using an empty itable for a placeholder so blog compiles before you make your changes
 
         # XXX HW 3.2 Work here to get the posts
-
+        cursor = self.db.posts.find_many()
         l = []
 
         for post in cursor:
@@ -90,6 +92,7 @@ class BlogPostDAO:
 
         post = None
         # XXX 3.2 Work here to retrieve the specified post
+        post = self.db.posts.find_one({'permalink':permalink})
 
         if post is not None:
             # fix up date
@@ -114,3 +117,6 @@ class BlogPostDAO:
             print "Could not update the collection, error"
             print "Unexpected error:", sys.exc_info()[0]
             return 0
+
+
+
