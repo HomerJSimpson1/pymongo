@@ -1,0 +1,1 @@
+{ "ts" : Timestamp(1466459686, 1), "h" : NumberLong("-5233381046574311975"), "v" : 2, "op" : "n", "ns" : "", "o" : { "msg" : "initiating set" } }
