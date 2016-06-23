@@ -34,4 +34,27 @@ db.popByZip.aggregate([{"$group": {"_id":"$state", "pop":{"$max":"$pop"}}}])
 
 
 
+// Use the $project stage of the aggregation framework pipeline
+db.popByZip.aggregate([{$project: { "_id":0, "city":1, "pop":1, "state":1, "zip": "$_id" }}])
+// Same as previous, but sorted by city
+db.popByZip.aggregate([{$project: { "_id":0, "city": 1, "pop":1, "state":1, "zip": "$_id" }}, {$sort: {"city":1}}])
+// Same example, but filtering using $match to specify one particular city
+db.popByZip.aggregate([{$project: { "_id":0, "city": 1, "pop":1, "state":1, "zip": "$_id" }}, {$match: {"city":"ACMAR"}}, {$sort: {"city":1}}])
+// Same example, but filtering using $match AT THE BEGINNING OF THE PIPELINE.  This is important because MongoDB only uses the indexes here if 
+// the $match and $sort stages occur at the beginning of the pipeline.
+db.popByZip.aggregate([{$match: {"city":"ACMAR"}}, {$sort: {"city":1}}, {$project: { "_id":0, "city": 1, "pop":1, "state":1, "zip": "$_id" }}])
 
+// Make the city all lowercase letters
+db.popByZip.aggregate([{$project: { "_id":0, "city": {$toLower:"$city"}, "pop":1, "state":1, "zip": "$_id" }}])
+db.popByZip.aggregate([{$project: { "_id":0, "city": {$toLower:"$city"}, "pop":1, "state":1, "zip": "$_id" }}, {$sort:{"city":1}}])
+
+
+// More examples
+db.popByZip.aggregate([{$match: {'state':'CA'}}, {$group:{_id:"$city", population:{$sum:"$pop"}, zip_codes:{$addToSet:"$_id"}}}, {$project: {_id:0, "city":"$_id", "population":1, "zip_codes":1}}, {$sort:{"city":1}}])
+db.popByZip.aggregate([{$match: {'pop': {$gt:100000}}}])
+
+// Sort by state then city
+ db.popByZip.aggregate([{$sort:{'state':1, 'city':1}}])
+
+// Using skip and limit
+db.popByZip.aggregate([{$match:{'state':'NY'}}, {$group:{ _id:"$city", population:{$sum:"$pop"}}}, {$project: {_id:0, "city":"$_id", "population":1}}, {$sort: {population:-1}}, {$skip:10}, {$limit:5}])
