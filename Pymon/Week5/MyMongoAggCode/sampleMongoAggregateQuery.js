@@ -58,3 +58,56 @@ db.popByZip.aggregate([{$match: {'pop': {$gt:100000}}}])
 
 // Using skip and limit
 db.popByZip.aggregate([{$match:{'state':'NY'}}, {$group:{ _id:"$city", population:{$sum:"$pop"}}}, {$project: {_id:0, "city":"$_id", "population":1}}, {$sort: {population:-1}}, {$skip:10}, {$limit:5}])
+
+
+// Get the total US Population - i.e. sum over all zip codes
+// Equivalent to SELECT sum(pop) AS total FROM popByZip in SQL language
+db.popByZip.aggregate([{$group: {_id:null, 'total': {$sum:"$pop"}}}])
+
+
+
+// Homework 5.1:
+// In order for the import of the blogs.json file, I had to add "--batchSize 100" to the mongoimport command
+// i.e. mongoimport -d blog -c posts --batchSize 100 --drop posts.json
+// Apparently the default batch size is 10000 and I had to decrease it in order for the import to succeed, due
+// to the size of the documents in the file
+db.posts.aggregate([ {"$unwind": "$comments" }, {$group: {"_id":"$comments.author", "count":{$sum:1} } }, {$project: {"comauthor":"$_id", "count":1} }, {"$sort":{"count":-1}} ], {allowDiskUse:true})
+
+
+
+// Homework 5.2:
+// Import statement used: mongoimport -d test -c zips --drop small_zips.json
+
+// db.zips.aggregate([{$match:{$in:['CA', 'NY']}}, {$group: {"_id": {"state":"$state", "city":"$city"}, avgPop:{$avg:"$pop"} }, {$}  ])
+
+
+// db.zips.aggregate([{$match:{'state': {$in:['CA', 'NY']}, 'pop': {$gt:25000}  }  } , {$group:{"_id": {"state":"$state", "city":"$city"}, avgpop:{$avg:"$pop"}}}, {$sort: {"avgpop":1} }])
+
+// db.zips.aggregate([
+//     {$match: 
+//              {'state': { $in: ['CA', 'NY'] } }
+//      },
+
+//     {$group:
+//              {"_id": { "state":"$state", "city": "$city"}, totpop: {$sum:"$pop"}}
+//      },
+
+//     {$match:
+//              {"totpop": {$gt:25000}}
+//      },
+//     {$group:
+//              {"_id": "$_id.state", avgpop:{$avg:"$totpop"}}
+//      }
+
+// ])
+
+// Final answer
+db.zips.aggregate([{$match: {'state': { $in: ['CA', 'NY'] } }}, {$group:{"_id": { "state":"$state", "city": "$city"}, totpop: {$sum:"$pop"}}}, {$match: {"totpop": {$gt:25000}}}, {$group: {"_id": "$_id.state", avgpop:{$avg:"$totpop"}} }])
+
+// Actually, need to add a num_cities variable that counts the number of cities in each state. Then you can
+// weight each states contribution by the number of cities in that state.  Alternatively, sum the population
+// of the two states together and sum the number of cities in the two states together, and then divide the two
+// quantities.
+
+
+// Homework 5.3:
