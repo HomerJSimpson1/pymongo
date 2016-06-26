@@ -111,3 +111,18 @@ db.zips.aggregate([{$match: {'state': { $in: ['CA', 'NY'] } }}, {$group:{"_id": 
 
 
 // Homework 5.3:
+// db.grades.aggregate([{$match:{"scores.type":{$in:["exam", "homework"]}}}, {$project:{"_id":0, "scoretype":"$scores.type"}}])
+// db.grades.aggregate([{$unwind: "$scores"}, {$match:{"scores.type":{$in:["exam", "homework"]}}}, {$project:{"_id":0, "scoretype":"$scores.type"}}, {$sort:{"scoretype":-1}}])
+db.grades.aggregate([{$unwind: "$scores"}, {$match:{"scores.type":{$in:["exam", "homework"]}}}, {$group: {"_id":{"class_id":"$class_id", "student_id":"$student_id"}, "studavg":{$avg:"$scores.score"}}}, {$group:{"_id":"$_id.class_id", "classavg":{$avg:"$studavg"}}}, {$sort:{"classavg":-1}}])
+
+
+
+
+
+// Homework 5.4:
+// Import statement
+mongoimport -d test -c zips --drop zips.json
+
+// Aggregation statement
+// db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1 }}  ])
+db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: {}} }])
