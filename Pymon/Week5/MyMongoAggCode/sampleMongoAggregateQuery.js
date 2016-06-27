@@ -125,4 +125,5 @@ mongoimport -d test -c zips --drop zips.json
 
 // Aggregation statement
 // db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1 }}  ])
-db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: {}} }])
+// db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: /^[0-9]/}}} ])
+db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: /^[0-9]/}}} , {$group: {"_id":null, "totalpop":{$sum:"$pop"}} } ])
