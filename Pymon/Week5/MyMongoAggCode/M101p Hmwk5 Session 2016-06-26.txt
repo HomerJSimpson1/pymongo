@@ -1,0 +1,300 @@
+{ "_id" : 4, "classavg" : 52.65541561065859 }
+{ "_id" : 17, "classavg" : 52.42469177746091 }
+{ "_id" : 23, "classavg" : 51.93284830763039 }
+{ "_id" : 3, "classavg" : 51.7742498662982 }
+{ "_id" : 0, "classavg" : 50.6431769584895 }
+{ "_id" : 19, "classavg" : 50.590719286350925 }
+{ "_id" : 27, "classavg" : 50.58111308566053 }
+{ "_id" : 11, "classavg" : 49.9528123653442 }
+{ "_id" : 29, "classavg" : 49.305440602697246 }
+{ "_id" : 7, "classavg" : 48.877087980134746 }
+{ "_id" : 6, "classavg" : 48.414852429568235 }
+Type "it" for more
+> db.grades.aggregate([{$unwind: "$scores"}, {$match:{"scores.type":{$in:["exam"
+, "homework"]}}}, {$group: {"_id":{"class_id":"$class_id", "student_id":"$studen
+t_id"}, "studavg":{$avg:"$scores.score"}}}, {$group:{"_id":"$_id.class_id", "cla
+ssavg":{$avg:"$studavg"}}}, {$sort:{"classavg":-1}}])
+{ "_id" : 1, "classavg" : 64.50642324269175 }
+{ "_id" : 5, "classavg" : 58.084487676135495 }
+{ "_id" : 20, "classavg" : 57.6309834548989 }
+{ "_id" : 26, "classavg" : 56.06918278769095 }
+{ "_id" : 9, "classavg" : 55.56861693456624 }
+{ "_id" : 14, "classavg" : 55.36017373346245 }
+{ "_id" : 24, "classavg" : 53.610345978016596 }
+{ "_id" : 16, "classavg" : 53.458335393624246 }
+{ "_id" : 13, "classavg" : 52.738286239952366 }
+{ "_id" : 4, "classavg" : 52.65541561065859 }
+{ "_id" : 17, "classavg" : 52.42469177746091 }
+{ "_id" : 23, "classavg" : 51.93284830763039 }
+{ "_id" : 3, "classavg" : 51.7742498662982 }
+{ "_id" : 0, "classavg" : 50.6431769584895 }
+{ "_id" : 19, "classavg" : 50.590719286350925 }
+{ "_id" : 27, "classavg" : 50.58111308566053 }
+{ "_id" : 11, "classavg" : 49.9528123653442 }
+{ "_id" : 29, "classavg" : 49.305440602697246 }
+{ "_id" : 7, "classavg" : 48.877087980134746 }
+{ "_id" : 6, "classavg" : 48.414852429568235 }
+Type "it" for more
+> it
+{ "_id" : 10, "classavg" : 47.66346217328061 }
+{ "_id" : 15, "classavg" : 47.2200946663058 }
+{ "_id" : 21, "classavg" : 45.41539323359457 }
+{ "_id" : 25, "classavg" : 43.99882003240129 }
+{ "_id" : 22, "classavg" : 43.47760542089679 }
+{ "_id" : 18, "classavg" : 43.40692681712815 }
+{ "_id" : 30, "classavg" : 42.71200726236121 }
+{ "_id" : 28, "classavg" : 41.59824801397288 }
+{ "_id" : 8, "classavg" : 41.30388381000019 }
+{ "_id" : 12, "classavg" : 40.62345969481145 }
+{ "_id" : 2, "classavg" : 37.61742117387635 }
+> show dbs
+blog      0.000GB
+local     0.000GB
+pcat      0.000GB
+school    0.000GB
+students  0.000GB
+test      0.000GB
+video     0.001GB
+> show collections
+grades
+names
+> use test
+switched to db test
+> show collections
+grades
+names
+> show collections
+grades
+names
+zips
+> db.zips.count()
+29467
+> db.zips.findOne()
+{
+        "_id" : "35004",
+        "city" : "ACMAR",
+        "loc" : [
+                -86.51557,
+                33.584132
+        ],
+        "pop" : 6055,
+        "state" : "AL"
+}
+> db.zips.aggregate([{$project: {first_char:{$substr:["$city", 0,1]}}}])
+{ "_id" : "35004", "first_char" : "A" }
+{ "_id" : "35005", "first_char" : "A" }
+{ "_id" : "35006", "first_char" : "A" }
+{ "_id" : "35007", "first_char" : "K" }
+{ "_id" : "35010", "first_char" : "N" }
+{ "_id" : "35014", "first_char" : "A" }
+{ "_id" : "35016", "first_char" : "A" }
+{ "_id" : "35019", "first_char" : "B" }
+{ "_id" : "35020", "first_char" : "B" }
+{ "_id" : "35023", "first_char" : "H" }
+{ "_id" : "35031", "first_char" : "B" }
+{ "_id" : "35033", "first_char" : "B" }
+{ "_id" : "35034", "first_char" : "B" }
+{ "_id" : "35035", "first_char" : "B" }
+{ "_id" : "35040", "first_char" : "C" }
+{ "_id" : "35042", "first_char" : "C" }
+{ "_id" : "35043", "first_char" : "C" }
+{ "_id" : "35044", "first_char" : "C" }
+{ "_id" : "35045", "first_char" : "C" }
+{ "_id" : "35049", "first_char" : "C" }
+Type "it" for more
+> db.zips.aggregate([{$project: {first_char:{$substr:["$city", 0,1]}}, "$city":1
+}])
+assert: command failed: {
+        "ok" : 0,
+        "errmsg" : "A pipeline stage specification object must contain exactly o
+ne field.",
+        "code" : 16435
+} : aggregate failed
+_getErrorWithCode@src/mongo/shell/utils.js:25:13
+doassert@src/mongo/shell/assert.js:13:14
+assert.commandWorked@src/mongo/shell/assert.js:267:5
+DBCollection.prototype.aggregate@src/mongo/shell/collection.js:1312:5
+@(shell):1:1
+
+2016-06-26T13:40:47.307-0400 E QUERY    [thread1] Error: command failed: {
+        "ok" : 0,
+        "errmsg" : "A pipeline stage specification object must contain exactly o
+ne field.",
+        "code" : 16435
+} : aggregate failed :
+_getErrorWithCode@src/mongo/shell/utils.js:25:13
+doassert@src/mongo/shell/assert.js:13:14
+assert.commandWorked@src/mongo/shell/assert.js:267:5
+DBCollection.prototype.aggregate@src/mongo/shell/collection.js:1312:5
+@(shell):1:1
+
+> db.zips.aggregate([{$project: {first_char:{$substr:["$city", 0,1]}}, "city":1}
+])
+assert: command failed: {
+        "ok" : 0,
+        "errmsg" : "A pipeline stage specification object must contain exactly o
+ne field.",
+        "code" : 16435
+} : aggregate failed
+_getErrorWithCode@src/mongo/shell/utils.js:25:13
+doassert@src/mongo/shell/assert.js:13:14
+assert.commandWorked@src/mongo/shell/assert.js:267:5
+DBCollection.prototype.aggregate@src/mongo/shell/collection.js:1312:5
+@(shell):1:1
+
+2016-06-26T13:40:54.938-0400 E QUERY    [thread1] Error: command failed: {
+        "ok" : 0,
+        "errmsg" : "A pipeline stage specification object must contain exactly o
+ne field.",
+        "code" : 16435
+} : aggregate failed :
+_getErrorWithCode@src/mongo/shell/utils.js:25:13
+doassert@src/mongo/shell/assert.js:13:14
+assert.commandWorked@src/mongo/shell/assert.js:267:5
+DBCollection.prototype.aggregate@src/mongo/shell/collection.js:1312:5
+@(shell):1:1
+
+> db.zips.aggregate([{$project: {first_char:{$substr:["$city", 0,1]}, "city":1}}
+])
+{ "_id" : "35004", "city" : "ACMAR", "first_char" : "A" }
+{ "_id" : "35005", "city" : "ADAMSVILLE", "first_char" : "A" }
+{ "_id" : "35006", "city" : "ADGER", "first_char" : "A" }
+{ "_id" : "35007", "city" : "KEYSTONE", "first_char" : "K" }
+{ "_id" : "35010", "city" : "NEW SITE", "first_char" : "N" }
+{ "_id" : "35014", "city" : "ALPINE", "first_char" : "A" }
+{ "_id" : "35016", "city" : "ARAB", "first_char" : "A" }
+{ "_id" : "35019", "city" : "BAILEYTON", "first_char" : "B" }
+{ "_id" : "35020", "city" : "BESSEMER", "first_char" : "B" }
+{ "_id" : "35023", "city" : "HUEYTOWN", "first_char" : "H" }
+{ "_id" : "35031", "city" : "BLOUNTSVILLE", "first_char" : "B" }
+{ "_id" : "35033", "city" : "BREMEN", "first_char" : "B" }
+{ "_id" : "35034", "city" : "BRENT", "first_char" : "B" }
+{ "_id" : "35035", "city" : "BRIERFIELD", "first_char" : "B" }
+{ "_id" : "35040", "city" : "CALERA", "first_char" : "C" }
+{ "_id" : "35042", "city" : "CENTREVILLE", "first_char" : "C" }
+{ "_id" : "35043", "city" : "CHELSEA", "first_char" : "C" }
+{ "_id" : "35044", "city" : "COOSA PINES", "first_char" : "C" }
+{ "_id" : "35045", "city" : "CLANTON", "first_char" : "C" }
+{ "_id" : "35049", "city" : "CLEVELAND", "first_char" : "C" }
+Type "it" for more
+> db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1
+ }}  ])
+{ "_id" : "35004", "city" : "ACMAR", "first_char" : "A" }
+{ "_id" : "35005", "city" : "ADAMSVILLE", "first_char" : "A" }
+{ "_id" : "35006", "city" : "ADGER", "first_char" : "A" }
+{ "_id" : "35007", "city" : "KEYSTONE", "first_char" : "K" }
+{ "_id" : "35010", "city" : "NEW SITE", "first_char" : "N" }
+{ "_id" : "35014", "city" : "ALPINE", "first_char" : "A" }
+{ "_id" : "35016", "city" : "ARAB", "first_char" : "A" }
+{ "_id" : "35019", "city" : "BAILEYTON", "first_char" : "B" }
+{ "_id" : "35020", "city" : "BESSEMER", "first_char" : "B" }
+{ "_id" : "35023", "city" : "HUEYTOWN", "first_char" : "H" }
+{ "_id" : "35031", "city" : "BLOUNTSVILLE", "first_char" : "B" }
+{ "_id" : "35033", "city" : "BREMEN", "first_char" : "B" }
+{ "_id" : "35034", "city" : "BRENT", "first_char" : "B" }
+{ "_id" : "35035", "city" : "BRIERFIELD", "first_char" : "B" }
+{ "_id" : "35040", "city" : "CALERA", "first_char" : "C" }
+{ "_id" : "35042", "city" : "CENTREVILLE", "first_char" : "C" }
+{ "_id" : "35043", "city" : "CHELSEA", "first_char" : "C" }
+{ "_id" : "35044", "city" : "COOSA PINES", "first_char" : "C" }
+{ "_id" : "35045", "city" : "CLANTON", "first_char" : "C" }
+{ "_id" : "35049", "city" : "CLEVELAND", "first_char" : "C" }
+Type "it" for more
+> db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1
+, "_id":1, "state":1, "pop":1 }}  ])
+{ "_id" : "35004", "city" : "ACMAR", "pop" : 6055, "state" : "AL", "first_char"
+: "A" }
+{ "_id" : "35005", "city" : "ADAMSVILLE", "pop" : 10616, "state" : "AL", "first_
+char" : "A" }
+{ "_id" : "35006", "city" : "ADGER", "pop" : 3205, "state" : "AL", "first_char"
+: "A" }
+{ "_id" : "35007", "city" : "KEYSTONE", "pop" : 14218, "state" : "AL", "first_ch
+ar" : "K" }
+{ "_id" : "35010", "city" : "NEW SITE", "pop" : 19942, "state" : "AL", "first_ch
+ar" : "N" }
+{ "_id" : "35014", "city" : "ALPINE", "pop" : 3062, "state" : "AL", "first_char"
+ : "A" }
+{ "_id" : "35016", "city" : "ARAB", "pop" : 13650, "state" : "AL", "first_char"
+: "A" }
+{ "_id" : "35019", "city" : "BAILEYTON", "pop" : 1781, "state" : "AL", "first_ch
+ar" : "B" }
+{ "_id" : "35020", "city" : "BESSEMER", "pop" : 40549, "state" : "AL", "first_ch
+ar" : "B" }
+{ "_id" : "35023", "city" : "HUEYTOWN", "pop" : 39677, "state" : "AL", "first_ch
+ar" : "H" }
+{ "_id" : "35031", "city" : "BLOUNTSVILLE", "pop" : 9058, "state" : "AL", "first
+_char" : "B" }
+{ "_id" : "35033", "city" : "BREMEN", "pop" : 3448, "state" : "AL", "first_char"
+ : "B" }
+{ "_id" : "35034", "city" : "BRENT", "pop" : 3791, "state" : "AL", "first_char"
+: "B" }
+{ "_id" : "35035", "city" : "BRIERFIELD", "pop" : 1282, "state" : "AL", "first_c
+har" : "B" }
+{ "_id" : "35040", "city" : "CALERA", "pop" : 4675, "state" : "AL", "first_char"
+ : "C" }
+{ "_id" : "35042", "city" : "CENTREVILLE", "pop" : 4902, "state" : "AL", "first_
+char" : "C" }
+{ "_id" : "35043", "city" : "CHELSEA", "pop" : 4781, "state" : "AL", "first_char
+" : "C" }
+{ "_id" : "35044", "city" : "COOSA PINES", "pop" : 7985, "state" : "AL", "first_
+char" : "C" }
+{ "_id" : "35045", "city" : "CLANTON", "pop" : 13990, "state" : "AL", "first_cha
+r" : "C" }
+{ "_id" : "35049", "city" : "CLEVELAND", "pop" : 2369, "state" : "AL", "first_ch
+ar" : "C" }
+Type "it" for more
+> db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1
+, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: {/^[0-9]/}}}
+} ])
+2016-06-26T15:54:54.672-0400 E QUERY    [thread1] SyntaxError: invalid property
+id @(shell):1:147
+
+> db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1
+, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: /^[0-9]/}}}
+])
+{ "_id" : "98791", "city" : "98791", "pop" : 5345, "state" : "AK", "first_char"
+: "9" }
+{ "_id" : "95411", "city" : "95411", "pop" : 133, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "95414", "city" : "95414", "pop" : 226, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "95440", "city" : "95440", "pop" : 2876, "state" : "CA", "first_char"
+: "9" }
+{ "_id" : "95455", "city" : "95455", "pop" : 843, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "95467", "city" : "95467", "pop" : 328, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "95489", "city" : "95489", "pop" : 358, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "95495", "city" : "95495", "pop" : 367, "state" : "CA", "first_char" :
+ "9" }
+{ "_id" : "81080", "city" : "81080", "pop" : 172, "state" : "CO", "first_char" :
+ "8" }
+{ "_id" : "81250", "city" : "81250", "pop" : 467, "state" : "CO", "first_char" :
+ "8" }
+{ "_id" : "32620", "city" : "32620", "pop" : 11567, "state" : "FL", "first_char"
+ : "3" }
+{ "_id" : "32630", "city" : "32630", "pop" : 20682, "state" : "FL", "first_char"
+ : "3" }
+{ "_id" : "32629", "city" : "32629", "pop" : 4922, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32636", "city" : "32636", "pop" : 7024, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32642", "city" : "32642", "pop" : 8744, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32646", "city" : "32646", "pop" : 5676, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32649", "city" : "32649", "pop" : 4778, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32650", "city" : "32650", "pop" : 15207, "state" : "FL", "first_char"
+ : "3" }
+{ "_id" : "32652", "city" : "32652", "pop" : 8683, "state" : "FL", "first_char"
+: "3" }
+{ "_id" : "32661", "city" : "32661", "pop" : 20969, "state" : "FL", "first_char"
+ : "3" }
+Type "it" for more
+> db.zips.aggregate([{$project: {first_char: {$substr:["$city", 0, 1]}, "city":1
+, "_id":1, "state":1, "pop":1 }}  , {$match: {"first_char":{$regex: /^[0-9]/}}}
+, {$group: {"_id":null, "totalpop":{$sum:"$pop"}} } ])
+{ "_id" : null, "totalpop" : 298015 }
+>
