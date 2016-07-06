@@ -116,19 +116,37 @@ db.messages.find({"headers.From":"andrew.fastow@enron.com", "headers.To":"jeff.s
 // Which pair of people have the greatest number of messages in the dataset?
 
 
+// db.messages.aggregate([{$unwind:"$headers.To" }, {$project: {"From":"$headers.From", "To":"$headers.To", "_id":0} } ])
+
+
+// db.messages.aggregate([ {"$unwind": "$headers.To" }, {"$group": {"_id":"$headers.From"}}, {"$project":{"_id":1}} ])
+
+// Counts the number of messages a person has sent
+// db.messages.aggregate([ {"$unwind": "$headers.To" }, {"$group": {"_id":"$headers.From", "numFrom": {"$sum":1}  }}, {"$project":{"_id":1, "numFrom":1}} ])
+
+// db.messages.aggregate([ {"$unwind": "$headers.To" }, {$project: {"compId":{"headers.From":1, "headers.To":1} } }, {"$group": {"_id":"$compId", "numFrom": {"$sum":1}  }}, {"$project":{"_id":1, "numFrom":1}} ])
+
+// db.messages.aggregate([ {"$unwind": "$headers.To" }, {"$group": {"_id": {"$headers.From":1, {"$addToSet":"$headers.To"} } }}, {"$project":{"_id":1}} ])
+// db.messages.aggregate([ {"$unwind": "$headers.To" }, {"$group": {"_id": {"$headers.From":1, "to":{"$addToSet":"$headers.To"}} }}, {"$project":{"_id":1}} ])
+
+
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$headers.From", "To":{"$addToSet": "$headers.To" } } }, {"$project": { "From": "$_id", "To":1, "_id":0 }} ])
+
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$headers.From", "To":{"$addToSet": "$headers.To" } } }, {"$unwind":"$To"}, {"$project": { "From": "$_id", "To":1, "_id":0 }} ])
+
+
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$headers.From", "To":{"$addToSet": "$headers.To" } } }, {"$unwind":"$To"}, {"$group": {"_id": {"From":"$From", "To": "$To" }, "pairCount":{"$sum":1} }}, {"$sort": {  "pairCount":-1 } }  ])
+
+
+// Doesn't work - every pair is only counted one time.  :-(
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$headers.From", "To":{"$addToSet": "$headers.To" } } }, {"$unwind":"$To"}, {"$group": {"_id": {"From":"$_id", "To": "$To" }, "pairCount":{"$sum":1} }}, {"$sort": {  "pairCount":-1 } }  ])
 
 
 
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$_id", "From":"$headers.From", "To":{"$addToSet": "$headers.To" } } }, {"$unwind":"$To"}, {"$group": {"_id": {"From":"$_id", "To": "$To" }, "pairCount":{"$sum":1} }}, {"$sort": {  "pairCount":-1 } }  ])
 
 
 
+// db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$_id", "List":{"$addToSet": {"From":"$headers.From", "To":"$headers.To" } } } }, {$unwind:"$List"}  ], {allowDiskUse:true})
 
-
-
-
-
-
-
-
-
-
+db.messages.aggregate([ {"$unwind":"$headers.To"}, {"$group": {"_id":"$_id", "List":{"$addToSet": {"From":"$headers.From", "To":"$headers.To" } } } }, {"$unwind":"$List"}, {"$group": {"_id":"$List", "pairCount":{$sum:1}} }, {"$sort": {"pairCount":-1}} ], {allowDiskUse:true})
