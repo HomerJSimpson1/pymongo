@@ -1,0 +1,60 @@
+show dbs
+use config
+show collections
+db.chunks.find()
+db.shards.find()
+
+// Run the query requested in the final - Result = "39:15"
+db.chunks.find().sort({_id:1}).next().lastmodEpoch.getTimestamp().toUTCString().substr(20,6)
+
+// Update the shards with their new locations
+// Make sure the config server mongod and mongo shell are the only mongod and mongo processes running!!!!
+db.shards.update({"_id":"s1"}, {"host":"localhost:27501"})
+db.shards.update({"_id":"s2"}, {"host":"localhost:27601"})
+
+// Exit the config server with Ctrl-C and then reconnect with mongod --configsvr --dbpath  and mongo localhost:27019/config
+
+
+// Start the shard servers:
+// Start up the mongo server for s1
+mongod --shardsvr --port 27501 --dbpath s1 --smallfiles --oplogSize 50
+// Start up the mongo server for s2
+mongod --shardsvr --port 27601 --dbpath s2 --smallfiles --oplogSize 50
+
+
+
+// List all mongo processes:
+// On Linux:
+// ps -A | grep mongo
+
+// On Windows:
+tasklist "IMAGENAME eq mongod.exe"
+
+
+// Restore shards s1 and s2
+// I didn't use the --oplogReplay option, as there was no oplog.bson file, so this just triggers an error anyway
+mongorestore -d snps -c elegans --port 27501 s1\snps\elegans.bson
+mongorestore -d snps -c elegans --port 27601 s2\snps\elegans.bson
+
+// THIS IS WHERE MY MISTAKE WAS!!!!!!!!!!!!!!!!!!!!!!!!!
+// The problem was that I didn't ever execute the statement below:
+mongos --configdb localhost:27019 --port 27017
+
+// THEN RUN:
+mongo
+
+// NOW IT WORKS!!!!!!!!!!!!!!!!!!
+
+
+show dbs
+use snps
+show collections
+var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"$N2" , n : { $sum : 1 } } } ] ).next(); print( x.n )
+
+
+// Create index on collection
+db.elegans.getIndexes()
+db.elegans.createIndex({N2:1, mutant:1})
+db.elegans.getIndexes()
+
+db.elegans.explain("executionStats").find({N2:"T", "mutant":"A"}).limit(5)

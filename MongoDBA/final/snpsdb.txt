@@ -1,0 +1,1579 @@
+// Summary of commands to execute:
+
+// Start up config server
+mongod --configsvr --dbpath config_server\config
+// OR
+mongod --configsvr --port 27019 --logpath log.config --logappend --dbpath config_server\config
+
+// Restore the config database
+mongorestore --port 27019 config_server
+
+// Start up mongo shell for config server
+mongo localhost:27019/config
+
+show dbs
+use config
+show collections
+db.chunks.find()
+db.shards.find()
+
+// Run the query requested in the final - Result = "39:15"
+db.chunks.find().sort({_id:1}).next().lastmodEpoch.getTimestamp().toUTCString().substr(20,6)
+
+// Update the shards with their new locations
+// Make sure the config server mongod and mongo shell are the only mongod and mongo processes running!!!!
+db.shards.update({"_id":"s1"}, {"host":"localhost:27501"})
+db.shards.update({"_id":"s2"}, {"host":"localhost:27601"})
+
+// Exit the config server with Ctrl-C and then reconnect with mongod --configsvr --dbpath  and mongo localhost:27019/config
+
+
+// Start the shard servers:
+// Start up the mongo server for s1
+mongod --shardsvr --port 27501 --dbpath s1 --smallfiles --oplogSize 50
+// OR
+mongod --shardsvr --port 27501 --dbpath s1 --smallfiles --oplogSize 50 --logpath log.s1 --logappend
+
+
+// Start up the mongo server for s2
+mongod --shardsvr --port 27601 --dbpath s2 --smallfiles --oplogSize 50
+// OR
+mongod --shardsvr --port 27601 --dbpath s2 --smallfiles --oplogSize 50 --logpath log.s2 --logappend
+
+
+
+// List all mongo processes:
+// On Linux:
+// ps -A | grep mongo
+
+// On Windows:
+tasklist "IMAGENAME eq mongod.exe"
+
+
+// Restore shards s1 and s2
+// I didn't use the --oplogReplay option, as there was no oplog.bson file, so this just triggers an error anyway
+mongorestore -d snps -c elegans --port 27501 s1\snps\elegans.bson
+mongorestore -d snps -c elegans --port 27601 s2\snps\elegans.bson
+
+// THIS IS WHERE MY MISTAKE WAS!!!!!!!!!!!!!!!!!!!!!!!!!
+// The problem was that I didn't ever execute the statement below:
+mongos --configdb localhost:27019 --port 27017
+
+// THEN RUN:
+mongo
+
+// NOW IT WORKS!!!!!!!!!!!!!!!!!!
+
+
+show dbs
+use snps
+show collections
+
+// Answer Question #9: Result = 47664
+var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"$N2" , n : { $sum : 1 } } } ] ).next(); print( x.n )
+
+
+// Create index on collection
+db.elegans.getIndexes()
+db.elegans.createIndex({N2:1, mutant:1})
+db.elegans.getIndexes()
+
+// Answer Question #10: Result - 2 shards examined, 8 documents examined (5 returned)
+db.elegans.explain("executionStats").find({N2:"T", "mutant":"A"}).limit(5)
+
+
+
+
+
+
+
+
+
+
+
+//******************************************************************************************************************************
+
+
+// MORE DETAILED TREATMENT BELOW - WITH COMMANDS, PROBLEMS, AND OUTPUT:
+
+
+//******************************************************************************************************************************
+
+
+
+
+
+// restore config server
+// NOTE:  I figured out after a few tries that I had to be in the gene_backup directory and then issue
+// restore "config_server", NOT in the config_server directory trying to restore "config"
+C:\Users\petersj\Downloads\gene_backup>mongorestore config_server
+
+// Output from above:
+
+ Directory of C:\Users\petersj\Downloads\gene_backup\config_server
+
+07/10/2016  02:25 PM    <DIR>          .
+07/10/2016  02:25 PM    <DIR>          ..
+07/10/2016  02:25 PM    <DIR>          config
+               0 File(s)              0 bytes
+               3 Dir(s)  110,407,385,088 bytes free
+
+C:\Users\petersj\Downloads\gene_backup\config_server>mongorestore --port 27001 c
+onfig
+2016-07-10T20:08:24.199-0400    Failed: error connecting to db server: no reacha
+ble servers
+
+C:\Users\petersj\Downloads\gene_backup\config_server>mongorestore config
+2016-07-10T20:13:29.484-0400    building a list of dbs and collections to restor
+e from config dir
+2016-07-10T20:13:29.485-0400    don't know what to do with file "config\actionlo
+g.bson", skipping...
+2016-07-10T20:13:29.486-0400    don't know what to do with file "config\actionlo
+g.metadata.json", skipping...
+2016-07-10T20:13:29.487-0400    don't know what to do with file "config\changelo
+g.bson", skipping...
+2016-07-10T20:13:29.487-0400    don't know what to do with file "config\changelo
+g.metadata.json", skipping...
+2016-07-10T20:13:29.488-0400    don't know what to do with file "config\chunks.b
+son", skipping...
+2016-07-10T20:13:29.488-0400    don't know what to do with file "config\chunks.m
+etadata.json", skipping...
+2016-07-10T20:13:29.489-0400    don't know what to do with file "config\collecti
+ons.bson", skipping...
+2016-07-10T20:13:29.489-0400    don't know what to do with file "config\collecti
+ons.metadata.json", skipping...
+2016-07-10T20:13:29.490-0400    don't know what to do with file "config\database
+s.bson", skipping...
+2016-07-10T20:13:29.491-0400    don't know what to do with file "config\database
+s.metadata.json", skipping...
+2016-07-10T20:13:29.491-0400    don't know what to do with file "config\lockping
+s.bson", skipping...
+2016-07-10T20:13:29.492-0400    don't know what to do with file "config\lockping
+s.metadata.json", skipping...
+2016-07-10T20:13:29.492-0400    don't know what to do with file "config\locks.bs
+on", skipping...
+2016-07-10T20:13:29.493-0400    don't know what to do with file "config\locks.me
+tadata.json", skipping...
+2016-07-10T20:13:29.493-0400    don't know what to do with file "config\mongos.b
+son", skipping...
+2016-07-10T20:13:29.494-0400    don't know what to do with file "config\mongos.m
+etadata.json", skipping...
+2016-07-10T20:13:29.494-0400    don't know what to do with file "config\settings
+.bson", skipping...
+2016-07-10T20:13:29.495-0400    don't know what to do with file "config\settings
+.metadata.json", skipping...
+2016-07-10T20:13:29.496-0400    don't know what to do with file "config\shards.b
+son", skipping...
+2016-07-10T20:13:29.496-0400    don't know what to do with file "config\shards.m
+etadata.json", skipping...
+2016-07-10T20:13:29.497-0400    don't know what to do with file "config\system.i
+ndexes.bson", skipping...
+2016-07-10T20:13:29.497-0400    don't know what to do with file "config\tags.bso
+n", skipping...
+2016-07-10T20:13:29.498-0400    don't know what to do with file "config\tags.met
+adata.json", skipping...
+2016-07-10T20:13:29.498-0400    don't know what to do with file "config\version.
+bson", skipping...
+2016-07-10T20:13:29.499-0400    don't know what to do with file "config\version.
+metadata.json", skipping...
+2016-07-10T20:13:29.499-0400    done
+
+C:\Users\petersj\Downloads\gene_backup\config_server>mongorestore --drop --oplog
+Replay config
+2016-07-10T21:33:20.538-0400    building a list of dbs and collections to restor
+e from config dir
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\actionlo
+g.bson", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\actionlo
+g.metadata.json", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\changelo
+g.bson", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\changelo
+g.metadata.json", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\chunks.b
+son", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\chunks.m
+etadata.json", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\collecti
+ons.bson", skipping...
+2016-07-10T21:33:20.539-0400    don't know what to do with file "config\collecti
+ons.metadata.json", skipping...
+2016-07-10T21:33:20.540-0400    don't know what to do with file "config\database
+s.bson", skipping...
+2016-07-10T21:33:20.540-0400    don't know what to do with file "config\database
+s.metadata.json", skipping...
+2016-07-10T21:33:20.541-0400    don't know what to do with file "config\lockping
+s.bson", skipping...
+2016-07-10T21:33:20.541-0400    don't know what to do with file "config\lockping
+s.metadata.json", skipping...
+2016-07-10T21:33:20.542-0400    don't know what to do with file "config\locks.bs
+on", skipping...
+2016-07-10T21:33:20.542-0400    don't know what to do with file "config\locks.me
+tadata.json", skipping...
+2016-07-10T21:33:20.542-0400    don't know what to do with file "config\mongos.b
+son", skipping...
+2016-07-10T21:33:20.543-0400    don't know what to do with file "config\mongos.m
+etadata.json", skipping...
+2016-07-10T21:33:20.544-0400    don't know what to do with file "config\settings
+.bson", skipping...
+2016-07-10T21:33:20.544-0400    don't know what to do with file "config\settings
+.metadata.json", skipping...
+2016-07-10T21:33:20.545-0400    don't know what to do with file "config\shards.b
+son", skipping...
+2016-07-10T21:33:20.545-0400    don't know what to do with file "config\shards.m
+etadata.json", skipping...
+2016-07-10T21:33:20.545-0400    don't know what to do with file "config\system.i
+ndexes.bson", skipping...
+2016-07-10T21:33:20.546-0400    don't know what to do with file "config\tags.bso
+n", skipping...
+2016-07-10T21:33:20.546-0400    don't know what to do with file "config\tags.met
+adata.json", skipping...
+2016-07-10T21:33:20.547-0400    don't know what to do with file "config\version.
+bson", skipping...
+2016-07-10T21:33:20.547-0400    don't know what to do with file "config\version.
+metadata.json", skipping...
+2016-07-10T21:33:20.548-0400    Failed: error scanning filesystem: no config/opl
+og.bson file to replay; make sure you run mongodump with --oplog
+
+C:\Users\petersj\Downloads\gene_backup\config_server>cd ..
+
+C:\Users\petersj\Downloads\gene_backup>mongorestore config_server
+2016-07-10T21:33:58.094-0400    building a list of dbs and collections to restor
+e from config_server dir
+2016-07-10T21:33:58.098-0400    reading metadata for config.actionlog from confi
+g_server\config\actionlog.metadata.json
+2016-07-10T21:33:58.098-0400    reading metadata for config.changelog from confi
+g_server\config\changelog.metadata.json
+2016-07-10T21:33:58.099-0400    reading metadata for config.chunks from config_s
+erver\config\chunks.metadata.json
+2016-07-10T21:33:58.100-0400    reading metadata for config.locks from config_se
+rver\config\locks.metadata.json
+2016-07-10T21:33:58.120-0400    restoring config.actionlog from config_server\co
+nfig\actionlog.bson
+2016-07-10T21:33:58.140-0400    restoring config.changelog from config_server\co
+nfig\changelog.bson
+2016-07-10T21:33:58.159-0400    restoring config.chunks from config_server\confi
+g\chunks.bson
+2016-07-10T21:33:58.179-0400    restoring indexes for collection config.chunks f
+rom metadata
+2016-07-10T21:33:58.180-0400    restoring config.locks from config_server\config
+\locks.bson
+2016-07-10T21:33:58.180-0400    restoring indexes for collection config.actionlo
+g from metadata
+2016-07-10T21:33:58.181-0400    restoring indexes for collection config.changelo
+g from metadata
+2016-07-10T21:33:58.235-0400    finished restoring config.chunks (2 documents)
+2016-07-10T21:33:58.236-0400    restoring indexes for collection config.locks fr
+om metadata
+2016-07-10T21:33:58.236-0400    finished restoring config.changelog (11 document
+s)
+2016-07-10T21:33:58.238-0400    finished restoring config.actionlog (114 documen
+ts)
+2016-07-10T21:33:58.238-0400    reading metadata for config.databases from confi
+g_server\config\databases.metadata.json
+2016-07-10T21:33:58.239-0400    reading metadata for config.shards from config_s
+erver\config\shards.metadata.json
+2016-07-10T21:33:58.239-0400    reading metadata for config.lockpings from confi
+g_server\config\lockpings.metadata.json
+2016-07-10T21:33:58.276-0400    finished restoring config.locks (3 documents)
+2016-07-10T21:33:58.277-0400    reading metadata for config.collections from con
+fig_server\config\collections.metadata.json
+2016-07-10T21:33:58.309-0400    restoring config.databases from config_server\co
+nfig\databases.bson
+2016-07-10T21:33:58.341-0400    restoring config.shards from config_server\confi
+g\shards.bson
+2016-07-10T21:33:58.375-0400    restoring config.lockpings from config_server\co
+nfig\lockpings.bson
+2016-07-10T21:33:58.405-0400    restoring indexes for collection config.shards f
+rom metadata
+2016-07-10T21:33:58.408-0400    restoring indexes for collection config.lockping
+s from metadata
+2016-07-10T21:33:58.410-0400    restoring indexes for collection config.database
+s from metadata
+2016-07-10T21:33:58.412-0400    restoring config.collections from config_server\
+config\collections.bson
+2016-07-10T21:33:58.437-0400    finished restoring config.shards (2 documents)
+2016-07-10T21:33:58.440-0400    reading metadata for config.mongos from config_s
+erver\config\mongos.metadata.json
+2016-07-10T21:33:58.465-0400    finished restoring config.lockpings (2 documents
+)
+2016-07-10T21:33:58.468-0400    restoring indexes for collection config.collecti
+ons from metadata
+2016-07-10T21:33:58.470-0400    finished restoring config.databases (3 documents
+)
+2016-07-10T21:33:58.472-0400    reading metadata for config.version from config_
+server\config\version.metadata.json
+2016-07-10T21:33:58.474-0400    reading metadata for config.settings from config
+_server\config\settings.metadata.json
+2016-07-10T21:33:58.501-0400    finished restoring config.collections (1 documen
+t)
+2016-07-10T21:33:58.503-0400    restoring config.mongos from config_server\confi
+g\mongos.bson
+2016-07-10T21:33:58.505-0400    reading metadata for config.tags from config_ser
+ver\config\tags.metadata.json
+2016-07-10T21:33:58.532-0400    restoring config.version from config_server\conf
+ig\version.bson
+2016-07-10T21:33:58.559-0400    restoring config.settings from config_server\con
+fig\settings.bson
+2016-07-10T21:33:58.586-0400    restoring indexes for collection config.settings
+ from metadata
+2016-07-10T21:33:58.588-0400    restoring indexes for collection config.mongos f
+rom metadata
+2016-07-10T21:33:58.590-0400    restoring indexes for collection config.version
+from metadata
+2016-07-10T21:33:58.591-0400    finished restoring config.settings (1 document)
+2016-07-10T21:33:58.592-0400    restoring config.tags from config_server\config\
+tags.bson
+2016-07-10T21:33:58.594-0400    finished restoring config.mongos (1 document)
+2016-07-10T21:33:58.596-0400    finished restoring config.version (1 document)
+2016-07-10T21:33:58.597-0400    restoring indexes for collection config.tags fro
+m metadata
+2016-07-10T21:33:58.626-0400    finished restoring config.tags (0 documents)
+2016-07-10T21:33:58.626-0400    done
+
+
+
+// Second time around, this time start configsvr first:
+// Start up config server
+mongod --configsvr --dbpath config_server\config
+
+
+
+// // Trying to mongorestore using --oplogReplay:
+// mongorestore --drop --port 27019 --oplogreplay config_server
+
+// // Output:
+// C:\Users\petersj\Downloads\gene_backup>mongorestore --drop --port 27019 --oplogr
+// eplay config_server
+// 2016-07-11T12:36:41.507-0400    error parsing command line options: unknown opti
+// on "oplogreplay"
+// 2016-07-11T12:36:41.507-0400    try 'mongorestore --help' for more information
+
+// C:\Users\petersj\Downloads\gene_backup>mongorestore --drop --port 27019 --oplogR
+// eplay config_server
+// 2016-07-11T12:36:54.238-0400    building a list of dbs and collections to restor
+// e from config_server dir
+// 2016-07-11T12:36:54.238-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger", skipping...
+// 2016-07-11T12:36:54.238-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.lock", skipping...
+// 2016-07-11T12:36:54.238-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.turtle", skipping...
+// 2016-07-11T12:36:54.238-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\WiredTigerLAS.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\_mdb_catalog.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\collection-0-7284669002690494529.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\collection-2-7284669002690494529.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\collection-3-7284669002690494529.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with subdirectory "config\
+// diagnostic.data", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\index-1-7284669002690494529.wt", skipping...
+// 2016-07-11T12:36:54.239-0400    don't know what to do with file "config_server\c
+// onfig\index-4-7284669002690494529.wt", skipping...
+// 2016-07-11T12:36:54.240-0400    don't know what to do with subdirectory "config\
+// journal", skipping...
+// 2016-07-11T12:36:54.240-0400    don't know what to do with file "config_server\c
+// onfig\mongod.lock", skipping...
+// 2016-07-11T12:36:54.240-0400    don't know what to do with file "config_server\c
+// onfig\sizeStorer.wt", skipping...
+// 2016-07-11T12:36:54.240-0400    Failed: error scanning filesystem: no config_ser
+// ver/oplog.bson file to replay; make sure you run mongodump with --oplog
+
+// C:\Users\petersj\Downloads\gene_backup>
+
+
+// // Do it again without --oplogReplay option:
+// C:\Users\petersj\Downloads\gene_backup>mongorestore --drop --port 27019 config_s
+// erver
+// 2016-07-11T12:38:54.334-0400    building a list of dbs and collections to restor
+// e from config_server dir
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.lock", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.turtle", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\WiredTiger.wt", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\WiredTigerLAS.wt", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\_mdb_catalog.wt", skipping...
+// 2016-07-11T12:38:54.335-0400    don't know what to do with file "config_server\c
+// onfig\collection-0-7284669002690494529.wt", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\collection-2-7284669002690494529.wt", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\collection-3-7284669002690494529.wt", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with subdirectory "config\
+// diagnostic.data", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\index-1-7284669002690494529.wt", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\index-4-7284669002690494529.wt", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with subdirectory "config\
+// journal", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\mongod.lock", skipping...
+// 2016-07-11T12:38:54.336-0400    don't know what to do with file "config_server\c
+// onfig\sizeStorer.wt", skipping...
+// 2016-07-11T12:38:54.337-0400    reading metadata for config.actionlog from confi
+// g_server\config\actionlog.metadata.json
+// 2016-07-11T12:38:54.337-0400    reading metadata for config.locks from config_se
+// rver\config\locks.metadata.json
+// 2016-07-11T12:38:54.337-0400    reading metadata for config.chunks from config_s
+// erver\config\chunks.metadata.json
+// 2016-07-11T12:38:54.338-0400    reading metadata for config.changelog from confi
+// g_server\config\changelog.metadata.json
+// 2016-07-11T12:38:54.360-0400    restoring config.actionlog from config_server\co
+// nfig\actionlog.bson
+// 2016-07-11T12:38:54.414-0400    restoring config.locks from config_server\config
+// \locks.bson
+// 2016-07-11T12:38:54.430-0400    restoring config.chunks from config_server\confi
+// g\chunks.bson
+// 2016-07-11T12:38:54.446-0400    restoring indexes for collection config.locks fr
+// om metadata
+// 2016-07-11T12:38:54.446-0400    restoring indexes for collection config.chunks f
+// rom metadata
+// 2016-07-11T12:38:54.451-0400    restoring config.changelog from config_server\co
+// nfig\changelog.bson
+// 2016-07-11T12:38:54.510-0400    finished restoring config.locks (3 documents)
+// 2016-07-11T12:38:54.512-0400    restoring indexes for collection config.actionlo
+// g from metadata
+// 2016-07-11T12:38:54.589-0400    finished restoring config.chunks (2 documents)
+// 2016-07-11T12:38:54.589-0400    finished restoring config.actionlog (114 documen
+// ts)
+// 2016-07-11T12:38:54.597-0400    restoring indexes for collection config.changelo
+// g from metadata
+// 2016-07-11T12:38:54.597-0400    reading metadata for config.shards from config_s
+// erver\config\shards.metadata.json
+// 2016-07-11T12:38:54.600-0400    reading metadata for config.databases from confi
+// g_server\config\databases.metadata.json
+// 2016-07-11T12:38:54.602-0400    finished restoring config.changelog (11 document
+// s)
+// 2016-07-11T12:38:54.605-0400    reading metadata for config.lockpings from confi
+// g_server\config\lockpings.metadata.json
+// 2016-07-11T12:38:54.607-0400    reading metadata for config.collections from con
+// fig_server\config\collections.metadata.json
+// 2016-07-11T12:38:54.628-0400    restoring config.shards from config_server\confi
+// g\shards.bson
+// 2016-07-11T12:38:54.661-0400    restoring config.databases from config_server\co
+// nfig\databases.bson
+// 2016-07-11T12:38:54.682-0400    restoring config.lockpings from config_server\co
+// nfig\lockpings.bson
+// 2016-07-11T12:38:54.728-0400    restoring indexes for collection config.shards f
+// rom metadata
+// 2016-07-11T12:38:54.728-0400    restoring indexes for collection config.database
+// s from metadata
+// 2016-07-11T12:38:54.736-0400    restoring indexes for collection config.lockping
+// s from metadata
+// 2016-07-11T12:38:54.736-0400    restoring config.collections from config_server\
+// config\collections.bson
+// 2016-07-11T12:38:54.751-0400    finished restoring config.shards (2 documents)
+// 2016-07-11T12:38:54.751-0400    finished restoring config.databases (3 documents
+// )
+// 2016-07-11T12:38:54.753-0400    reading metadata for config.mongos from config_s
+// erver\config\mongos.metadata.json
+// 2016-07-11T12:38:54.783-0400    finished restoring config.lockpings (2 documents
+// )
+// 2016-07-11T12:38:54.785-0400    restoring indexes for collection config.collecti
+// ons from metadata
+// 2016-07-11T12:38:54.788-0400    reading metadata for config.version from config_
+// server\config\version.metadata.json
+// 2016-07-11T12:38:54.802-0400    restoring config.storage from config_server\conf
+// ig\storage.bson
+// 2016-07-11T12:38:54.820-0400    finished restoring config.collections (1 documen
+// t)
+// 2016-07-11T12:38:54.821-0400    restoring config.mongos from config_server\confi
+// g\mongos.bson
+// 2016-07-11T12:38:54.821-0400    reading metadata for config.settings from config
+// _server\config\settings.metadata.json
+// 2016-07-11T12:38:54.850-0400    no indexes to restore
+// 2016-07-11T12:38:54.850-0400    finished restoring config.storage (1 document)
+// 2016-07-11T12:38:54.850-0400    restoring config.version from config_server\conf
+// ig\version.bson
+// 2016-07-11T12:38:54.858-0400    reading metadata for config.tags from config_ser
+// ver\config\tags.metadata.json
+// 2016-07-11T12:38:54.916-0400    restoring indexes for collection config.version
+// from metadata
+// 2016-07-11T12:38:54.916-0400    restoring indexes for collection config.mongos f
+// rom metadata
+// 2016-07-11T12:38:54.917-0400    restoring config.settings from config_server\con
+// fig\settings.bson
+// 2016-07-11T12:38:54.934-0400    finished restoring config.version (1 document)
+// 2016-07-11T12:38:54.934-0400    finished restoring config.mongos (1 document)
+// 2016-07-11T12:38:54.934-0400    restoring indexes for collection config.settings
+//  from metadata
+// 2016-07-11T12:38:54.936-0400    finished restoring config.settings (1 document)
+// 2016-07-11T12:38:54.937-0400    restoring config.tags from config_server\config\
+// tags.bson
+// 2016-07-11T12:38:54.941-0400    restoring indexes for collection config.tags fro
+// m metadata
+// 2016-07-11T12:38:54.954-0400    finished restoring config.tags (0 documents)
+// 2016-07-11T12:38:54.955-0400    done
+
+// C:\Users\petersj\Downloads\gene_backup>
+
+
+
+
+// Start up config server
+mongod --configsvr --dbpath config_server\config
+
+// Start up mongo shell for config server
+mongo localhost:27019/config
+
+// NOTE: I was unable to see any collections when I was in this mongo shell.
+// However, when I was connected to a regular mongod instance using a regular mongo shell,
+// I was able to see the config database and the collections inside, so I used that to make the
+// changes as per the directions in the final exam.
+
+// > show dbs
+// blog      0.000GB
+// config    0.000GB
+// enron     0.215GB
+// local     0.000GB
+// pcat      0.000GB
+// school    0.000GB
+// students  0.000GB
+// test      0.002GB
+// video     0.001GB
+// > use config
+// switched to db config
+// > show collections
+// actionlog
+// changelog
+// chunks
+// collections
+// databases
+// lockpings
+// locks
+// mongos
+// settings
+// shards
+// tags
+// version
+// > db.chunks.find()
+// { "_id" : "snps.elegans-snp_\"haw100000\"", "lastmod" : Timestamp(2, 1), "lastmo
+// dEpoch" : ObjectId("553f0ef319d7841961ac8fc1"), "ns" : "snps.elegans", "min" : {
+//  "snp" : "haw100000" }, "max" : { "snp" : { "$maxKey" : 1 } }, "shard" : "s1" }
+// { "_id" : "snps.elegans-snp_MinKey", "lastmod" : Timestamp(2, 0), "lastmodEpoch"
+//  : ObjectId("553f0ef319d7841961ac8fc1"), "ns" : "snps.elegans", "min" : { "snp"
+// : { "$minKey" : 1 } }, "max" : { "snp" : "haw100000" }, "shard" : "s2" }
+// > db.chunks.find().sort({_id:1}).next().lastmodEpoch.getTimestamp().toUTCString(
+// ).substr(20,6)
+// 39:15
+// > db.shards.find()
+// { "_id" : "s1", "host" : "s1/genome_svr1:27501,genome_svr2:27502,genome_svr2:275
+// 03" }
+// { "_id" : "s2", "host" : "s2/genome_svr4:27601,genome_svr5:27602,genome_svr5:276
+// 03" }
+
+
+// Update of shards:
+// // Output:
+// C:\Users\petersj>mongo
+// 2016-07-11T08:00:08.861-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+// is not installed, will zero-out data files
+// MongoDB shell version: 3.2.6
+// connecting to: test
+// > show dbs
+// blog      0.000GB
+// config    0.000GB
+// enron     0.215GB
+// local     0.000GB
+// pcat      0.000GB
+// school    0.000GB
+// students  0.000GB
+// test      0.002GB
+// video     0.001GB
+// > use config
+// switched to db config
+// > show collections
+// actionlog
+// changelog
+// chunks
+// collections
+// databases
+// lockpings
+// locks
+// mongos
+// settings
+// shards
+// tags
+// version
+// > db.shards.find9)
+// 2016-07-11T08:00:22.640-0400 E QUERY    [thread1] SyntaxError: missing ; before
+// statement @(shell):1:15
+
+// > db.shards.find()
+// { "_id" : "s1", "host" : "s1/genome_svr1:27501,genome_svr2:27502,genome_svr2:275
+// 03" }
+// { "_id" : "s2", "host" : "s2/genome_svr4:27601,genome_svr5:27602,genome_svr5:276
+// 03" }
+// > db.shards.update({_id:"s1"}, {"host":"localhost:27501"})
+// WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+// > db.shards.update({_id:"s2"}, {"host":"localhost:27601"})
+// WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+// > db.shards.find()
+// { "_id" : "s1", "host" : "localhost:27501" }
+// { "_id" : "s2", "host" : "localhost:27601" }
+// > exit
+// bye
+
+
+
+
+
+
+// Connect to config server and query the chunks and shards collections
+// Then update the shards collection to point the hosts for s1 and s2
+// to new locations (localhost:27501 and localhost:27601 respectively)
+
+C:\Users\petersj\Downloads\gene_backup>mongo localhost:27019/config
+2016-07-11T12:42:15.134-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: localhost:27019/config
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T12:42:15.169-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified.
+
+configsvr> show dbs
+config  0.000GB
+local   0.000GB
+configsvr> use config
+switched to db config
+configsvr> show collections
+actionlog
+changelog
+chunks
+collections
+databases
+lockpings
+locks
+mongos
+settings
+shards
+storage
+tags
+version
+configsvr> db.chunks.find()
+{ "_id" : "snps.elegans-snp_\"haw100000\"", "lastmod" : Timestamp(2, 1), "lastmo
+dEpoch" : ObjectId("553f0ef319d7841961ac8fc1"), "ns" : "snps.elegans", "min" : {
+ "snp" : "haw100000" }, "max" : { "snp" : { "$maxKey" : 1 } }, "shard" : "s1" }
+{ "_id" : "snps.elegans-snp_MinKey", "lastmod" : Timestamp(2, 0), "lastmodEpoch"
+ : ObjectId("553f0ef319d7841961ac8fc1"), "ns" : "snps.elegans", "min" : { "snp"
+: { "$minKey" : 1 } }, "max" : { "snp" : "haw100000" }, "shard" : "s2" }
+configsvr> db.shards.find9)
+2016-07-11T12:43:11.474-0400 E QUERY    [thread1] SyntaxError: missing ; before
+statement @(shell):1:15
+
+configsvr> db.shards.find()
+{ "_id" : "s1", "host" : "s1/genome_svr1:27501,genome_svr2:27502,genome_svr2:275
+03" }
+{ "_id" : "s2", "host" : "s2/genome_svr4:27601,genome_svr5:27602,genome_svr5:276
+03" }
+configsvr> configsvr> db.chunks.find().sort({_id:1}).next().lastmodEpoch.getTime
+stamp().toUTCString().substr(20,6)
+2016-07-11T12:45:48.726-0400 E QUERY    [thread1] ReferenceError: configsvr is n
+ot defined :
+@(shell):1:1
+
+configsvr> db.chunks.find().sort({_id:1}).next().lastmodEpoch.getTimestamp().toUTCString().substr(20,6)
+39:15
+configsvr> db.shards.find()
+{ "_id" : "s1", "host" : "s1/genome_svr1:27501,genome_svr2:27502,genome_svr2:275
+03" }
+{ "_id" : "s2", "host" : "s2/genome_svr4:27601,genome_svr5:27602,genome_svr5:276
+03" }
+configsvr> db.shards.update({"_id":"s1"}, {"host":"localhost:27501"})
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+configsvr> db.shards.update({"_id":"s2"}, {"host":"localhost:27601"})
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+configsvr> exit
+bye
+
+
+// Exited the config server -- now reconnect
+
+C:\Users\petersj\Downloads\gene_backup>mongo localhost:27019/config
+2016-07-11T12:55:29.840-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: localhost:27019/config
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T12:55:29.883-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified.
+
+configsvr> db
+config
+configsvr> exit
+bye
+
+
+
+
+
+
+
+// Start the shard servers:
+// Start up the mongo server for s1
+mongod --shardsvr --port 27501 --dbpath s1 --smallfiles --oplogSize 50
+// Start up the mongo server for s2
+mongod --shardsvr --port 27601 --dbpath s2 --smallfiles --oplogSize 50
+
+
+
+
+// // List all mongo processes:
+// // On Linux:
+// ps -A | grep mongo
+
+// On Windows:
+tasklist "IMAGENAME eq mongod.exe"
+
+
+
+// Windows Powershell Output showing 3 running mongod processes and no mongo processes running
+
+PS C:\Windows\system32> tasklist /fi "IMAGENAME eq mongo.exe"
+INFO: No tasks are running which match the specified criteria.
+PS C:\Windows\system32> tasklist /fi "IMAGENAME eq mongod.exe"
+
+Image Name                     PID Session Name        Session#    Mem Usage
+========================= ======== ================ =========== ============
+mongod.exe                   11164 Console                    1     89,884 K
+mongod.exe                   10020 Console                    1     48,784 K
+mongod.exe                    8080 Console                    1     49,216 K
+PS C:\Windows\system32>
+
+
+
+
+
+// // Restore shards s1 and s2
+// // I didn't execute these statements, but thought about it, since I never did --oplogReplay when restoring the config_server
+// // As it turns out, no oplog.bson file is present for any of these, thus indicating no need to specify --oplogReplay (indeed, it 
+// // generated an error with the config server, so I did not try with the shard servers).
+// mongorestore --drop --port 27019 --oplogreplay config_server
+// mongorestore --port 27501 --oplogReplay s1
+// mongorestore --port 27601 --oplogReplay s2
+
+
+// // Instead, I used these statements....
+// mongorestore --port 27501 s1
+// mongorestore --port 27601 s2
+
+
+// // Okay, those didn't work, so these finally did.  Hope these are right....
+// mongorestore -d finalexam -c snps --port 27501 s1\snps\elegans.bson
+// mongorestore -d finalexam -c snps --port 27601 s2\snps\elegans.bson
+
+// Okay, those were mistaken in that the database name = snps and the collection name = elegans.
+mongorestore -d snps -c elegans --port 27501 s1\snps\elegans.bson
+mongorestore -d snps -c elegans --port 27601 s2\snps\elegans.bson
+
+
+
+
+
+
+// ****************************************************************************************************************************************************************
+
+
+// THIS IS WHERE MY MISTAKE WAS!!!!!!!!!!!!!!!!!!!!!!!!!
+// I think the problem is that I didn't ever execute the statement below:
+mongos --configdb localhost:27019 --port 27017
+
+// THEN RUN:
+mongo
+
+// NOW IT WORKS!!!!!!!!!!!!!!!!!!
+
+
+
+// ****************************************************************************************************************************************************************
+
+
+
+
+
+
+// Below is a listing of some of the commands and outputs from when I was unable to get mongos going, due to my forgetting
+// to do 
+// mongos --configdb localhost:27019 --port 27017
+// BEFORE trying to run the 
+// mongo
+// command.  :-(
+
+
+
+
+
+
+
+
+
+
+// Attempts to connect to mongos repeatedly fail, even though the config server and both shard
+// servers are up and running (see immediately above - Windows Powershell output).
+
+C:\Users\petersj\Downloads\gene_backup>mongo localhost:27017
+2016-07-11T13:48:36.805-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: localhost:27017/test
+2016-07-11T13:48:37.834-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.1
+:27017, reason: errno:10061 No connection could be made because the target machi
+ne actively refused it.
+2016-07-11T13:48:37.835-0400 E QUERY    [thread1] Error: couldn't connect to ser
+ver localhost:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+
+
+
+
+C:\Users\petersj\Downloads\gene_backup>mongo
+2016-07-11T13:36:50.676-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: test
+2016-07-11T13:36:51.726-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:36:51.727-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver 127.0.0.1:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:229:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27018
+2016-07-11T13:39:16.864-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27018/test
+2016-07-11T13:39:17.914-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27018, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:39:17.915-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver 127.0.0.1:27018, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27017
+2016-07-11T13:39:22.228-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27017/test
+2016-07-11T13:39:23.258-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:39:23.259-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver 127.0.0.1:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27019
+2016-07-11T13:39:27.413-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27019/test
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T13:39:27.451-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified
+
+configsvr> exit
+bye
+
+C:\Users\petersj\Downloads\gene_backup>mongo
+2016-07-11T13:46:02.592-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: test
+2016-07-11T13:46:03.621-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:46:03.622-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver 127.0.0.1:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:229:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27017
+2016-07-11T13:46:16.140-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27017/test
+2016-07-11T13:46:17.170-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:46:17.171-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver 127.0.0.1:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo localhost:27017
+2016-07-11T13:47:12.361-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: localhost:27017/test
+2016-07-11T13:47:13.391-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:47:13.393-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver localhost:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+C:\Users\petersj\Downloads\gene_backup>mongo localhost:27017
+2016-07-11T13:47:58.368-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: localhost:27017/test
+2016-07-11T13:47:59.397-0400 W NETWORK  [thread1] Failed to connect to 127.0.0.
+:27017, reason: errno:10061 No connection could be made because the target mach
+ne actively refused it.
+2016-07-11T13:47:59.398-0400 E QUERY    [thread1] Error: couldn't connect to se
+ver localhost:27017, connection attempt failed :
+connect@src/mongo/shell/mongo.js:231:14
+@(connect):1:6
+
+exception: connect failed
+
+
+
+
+// This mongo only connected because I started a mongod on the default port, after failing
+// many times to get a mongos started.  Of course, it just launched a "regular" mongo shell,
+// not a mongos shell.  :-(
+
+C:\Users\petersj\Downloads\gene_backup>mongo
+2016-07-11T13:51:09.793-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: test
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T13:51:09.831-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified
+
+> show dbs
+blog         0.011GB
+blogwk3      0.000GB
+blogwk4      0.011GB
+blogwk5      0.011GB
+enron        0.218GB
+local        0.000GB
+m101         0.000GB
+pcat         0.000GB
+performance  0.001GB
+photos       0.011GB
+school       0.000GB
+store        0.000GB
+studentsCh2  0.000GB
+test         0.000GB
+usPop        0.002GB
+week6        0.092GB
+> ^C
+bye
+
+C:\Users\petersj\Downloads\gene_backup>cd ..
+
+C:\Users\petersj\Downloads>mongo --dbpath gene_backup
+Error parsing command line: unrecognised option '--dbpath'
+try 'mongo --help' for more information
+
+C:\Users\petersj\Downloads>cd gene_backup
+
+C:\Users\petersj\Downloads\gene_backup>dir
+ Volume in drive C is OS
+ Volume Serial Number is 2CAA-5877
+
+ Directory of C:\Users\petersj\Downloads\gene_backup
+
+07/11/2016  11:29 AM    <DIR>          .
+07/11/2016  11:29 AM    <DIR>          ..
+07/11/2016  11:29 AM    <DIR>          config_server
+07/11/2016  01:37 PM    <DIR>          s1
+07/11/2016  01:39 PM    <DIR>          s2
+               0 File(s)              0 bytes
+               5 Dir(s)  141,395,832,832 bytes free
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27501
+2016-07-11T14:16:13.568-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27501/test
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T14:16:13.606-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified
+
+> show dbs
+finalexam  0.007GB
+local      0.000GB
+snps       0.007GB
+> exit
+bye
+
+C:\Users\petersj\Downloads\gene_backup>mongod
+2016-07-11T14:16:55.812-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+2016-07-11T14:16:55.812-0400 I CONTROL  [initandlisten] MongoDB starting : pid=
+080 port=27017 dbpath=C:\data\db\ 64-bit host=NCI-01940306
+2016-07-11T14:16:55.813-0400 I CONTROL  [initandlisten] targetMinOS: Windows 7/
+indows Server 2008 R2
+2016-07-11T14:16:55.813-0400 I CONTROL  [initandlisten] db version v3.2.6
+2016-07-11T14:16:55.813-0400 I CONTROL  [initandlisten] git version: 05552b562c
+a0b3143a729aaa0838e558dc49b25
+2016-07-11T14:16:55.813-0400 I CONTROL  [initandlisten] OpenSSL version: OpenSS
+ 1.0.1p-fips 9 Jul 2015
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten] allocator: tcmalloc
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten] modules: none
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten] build environment:
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten]     distmod: 2008plus-s
+l
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten]     distarch: x86_64
+2016-07-11T14:16:55.814-0400 I CONTROL  [initandlisten]     target_arch: x86_64
+2016-07-11T14:16:55.816-0400 I CONTROL  [initandlisten] options: {}
+2016-07-11T14:16:55.817-0400 I -        [initandlisten] Detected data files in
+:\data\db\ created by the 'wiredTiger' storage engine, so setting the active st
+rage engine to 'wiredTiger'.
+2016-07-11T14:16:55.817-0400 I STORAGE  [initandlisten] wiredtiger_open config:
+create,cache_size=18G,session_max=20000,eviction=(threads_max=4),config_base=fa
+se,statistics=(fast),log=(enabled=true,archive=true,path=journal,compressor=sna
+py),file_manager=(close_idle_time=100000),checkpoint=(wait=60,log_size=2GB),sta
+istics_log=(wait=0),
+2016-07-11T14:16:56.132-0400 I NETWORK  [HostnameCanonicalizationWorker] Starti
+g hostname canonicalization worker
+2016-07-11T14:16:56.132-0400 I FTDC     [initandlisten] Initializing full-time
+iagnostic data capture with directory 'C:/data/db/diagnostic.data'
+2016-07-11T14:16:56.133-0400 I NETWORK  [initandlisten] waiting for connections
+on port 27017
+2016-07-11T14:17:05.014-0400 I NETWORK  [initandlisten] connection accepted fro
+ 127.0.0.1:60965 #1 (1 connection now open)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// mongo connection to Shard 2 (s2) server running on port 27601
+
+
+C:\Users\petersj\Downloads\gene_backup>mongo --port 27601
+2016-07-11T13:59:10.071-0400 I CONTROL  [main] Hotfix KB2731284 or later update
+is not installed, will zero-out data files
+MongoDB shell version: 3.2.6
+connecting to: 127.0.0.1:27601/test
+Welcome to the MongoDB shell.
+For interactive help, type "help".
+For more comprehensive documentation, see
+        http://docs.mongodb.org/
+Questions? Try the support group
+        http://groups.google.com/group/mongodb-user
+2016-07-11T13:59:10.110-0400 I STORAGE  [main] In File::open(), CreateFileW for
+'Z:\\.mongorc.js' failed with errno:3 The system cannot find the path specified.
+
+> show dbs
+finalexam  0.000GB
+local      0.000GB
+> use finalexam
+switched to db finalexam
+> show collections
+snps
+> db.snps.count()
+482
+> var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"
+$N2" , n : { $sum : 1 } } } ] ).next(); print( x.n )
+2016-07-11T14:01:06.252-0400 E QUERY    [thread1] Error: error hasNext: false :
+DBCommandCursor.prototype.next@src/mongo/shell/query.js:803:1
+@(shell):1:13
+
+> var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"
+$N2" , n : { $sum : 1 } } } ] )
+> x
+> db.snps.findOne()
+{
+        "_id" : ObjectId("50c73c87f9cfd5a742299f1c"),
+        "snp" : "CE1-172",
+        "N2" : "a",
+        "mutant" : "g",
+        "strain" : "CB4856"
+}
+> db.snps.findOne({N2:"T"})
+{
+        "_id" : ObjectId("50c73c89f9cfd5a74229c7e4"),
+        "snp" : "haw10000",
+        "N2" : "T",
+        "mutant" : "A",
+        "strain" : "CB4856"
+}
+> db.snps.findOne({N2:"T"}).count()
+2016-07-11T14:02:06.474-0400 E QUERY    [thread1] TypeError: db.snps.findOne(...
+).count is not a function :
+@(shell):1:1
+
+> db.snps.find({N2:"T"}).count()
+4
+> var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { "$group" : { _id
+:"$N2" , "n" : { "$sum" : 1 } } } ] )
+> x
+> db.elegans.aggregate( [ { $match : { N2 : "T" } } , { "$group" : { _id:"$N2" ,
+ "n" : { "$sum" : 1 } } } ] )
+> var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"
+$N2" , n : { $sum : 1 } } } ] ).next(); print( x.n )
+2016-07-11T14:06:14.921-0400 E QUERY    [thread1] Error: error hasNext: false :
+DBCommandCursor.prototype.next@src/mongo/shell/query.js:803:1
+@(shell):1:13
+
+> db.elegans.aggregate( [ { $match : { N2 : "T" } } , { "$group" : { _id:"$N2" ,
+ "n" : { "$sum" : 1 } } } ] )
+> show dbs
+finalexam  0.000GB
+local      0.000GB
+snps       0.000GB
+> use snps
+switched to db snps
+> show collections
+elegans
+> db.elegans.aggregate( [ { $match : { N2 : "T" } } , { "$group" : { _id:"$N2" ,
+ "n" : { "$sum" : 1 } } } ] )
+{ "_id" : "T", "n" : 4 }
+> var x = db.elegans.aggregate( [ { $match : { N2 : "T" } } , { $group : { _id:"
+$N2" , n : { $sum : 1 } } } ] ).next(); print( x.n )
+4
+> db.elegans.find({N2:"T"}).count()
+4
+> db.elegans.find({Mutant:"A"}).count()
+0
+> db.elegans.find({mutant:"A"}).count()
+4
+> db.elegans.find({"N2":"T", "mutant":"A"}).count()
+2
+> db.elegans.find( { N2 : "T", mutant : "A" } ).limit( 5 )
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0d0"), "snp" : "dbP4", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+{ "_id" : ObjectId("50c73c89f9cfd5a74229c7e4"), "snp" : "haw10000", "N2" : "T",
+"mutant" : "A", "strain" : "CB4856" }
+> db.elegans.getIndexes()
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "name" : "_id_",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "snp" : 1
+                },
+                "name" : "snp_1",
+                "ns" : "snps.elegans"
+        }
+]
+> db.elegans.createIndex({N2:1, mutant:1})
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 2,
+        "numIndexesAfter" : 3,
+        "ok" : 1
+}
+> db.elegans.getIndexes()
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "name" : "_id_",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "snp" : 1
+                },
+                "name" : "snp_1",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "N2" : 1,
+                        "mutant" : 1
+                },
+                "name" : "N2_1_mutant_1",
+                "ns" : "snps.elegans"
+        }
+]
+
+
+
+
+
+
+// Mongo connection to Shard 1 (s1) server running on port 27501
+// .... some of the output from querying the shard server running on port 27501...
+// I lost a bunch of the commands/output as it was removed from the buffer.  :-(
+
+17788
+> db.elegans.find( { N2 : "T", mutant : "A" } ).limit( 5 )
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0d0"), "snp" : "dbP4", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0d6"), "snp" : "haw2", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0da"), "snp" : "haw6", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0db"), "snp" : "haw7", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+{ "_id" : ObjectId("50c73c87f9cfd5a74229a0dc"), "snp" : "haw8", "N2" : "T", "mut
+ant" : "A", "strain" : "CB4856" }
+> db.elegans.explain("executionStats").find({N2:"T", "mutant":"A"}).limit(5)
+{
+        "queryPlanner" : {
+                "plannerVersion" : 1,
+                "namespace" : "snps.elegans",
+                "indexFilterSet" : false,
+                "parsedQuery" : {
+                        "$and" : [
+                                {
+                                        "N2" : {
+                                                "$eq" : "T"
+                                        }
+                                },
+                                {
+                                        "mutant" : {
+                                                "$eq" : "A"
+                                        }
+                                }
+                        ]
+                },
+                "winningPlan" : {
+                        "stage" : "LIMIT",
+                        "limitAmount" : 5,
+                        "inputStage" : {
+                                "stage" : "COLLSCAN",
+                                "filter" : {
+                                        "$and" : [
+                                                {
+                                                        "N2" : {
+                                                                "$eq" : "T"
+                                                        }
+                                                },
+                                                {
+                                                        "mutant" : {
+                                                                "$eq" : "A"
+                                                        }
+                                                }
+                                        ]
+                                },
+                                "direction" : "forward"
+                        }
+                },
+                "rejectedPlans" : [ ]
+        },
+        "executionStats" : {
+                "executionSuccess" : true,
+                "nReturned" : 5,
+                "executionTimeMillis" : 0,
+                "totalKeysExamined" : 0,
+                "totalDocsExamined" : 248,
+                "executionStages" : {
+                        "stage" : "LIMIT",
+                        "nReturned" : 5,
+                        "executionTimeMillisEstimate" : 0,
+                        "works" : 250,
+                        "advanced" : 5,
+                        "needTime" : 244,
+                        "needYield" : 0,
+                        "saveState" : 1,
+                        "restoreState" : 1,
+                        "isEOF" : 1,
+                        "invalidates" : 0,
+                        "limitAmount" : 5,
+                        "inputStage" : {
+                                "stage" : "COLLSCAN",
+                                "filter" : {
+                                        "$and" : [
+                                                {
+                                                        "N2" : {
+                                                                "$eq" : "T"
+                                                        }
+                                                },
+                                                {
+                                                        "mutant" : {
+                                                                "$eq" : "A"
+                                                        }
+                                                }
+                                        ]
+                                },
+                                "nReturned" : 5,
+                                "executionTimeMillisEstimate" : 0,
+                                "works" : 249,
+                                "advanced" : 5,
+                                "needTime" : 244,
+                                "needYield" : 0,
+                                "saveState" : 1,
+                                "restoreState" : 1,
+                                "isEOF" : 0,
+                                "invalidates" : 0,
+                                "direction" : "forward",
+                                "docsExamined" : 248
+                        }
+                }
+        },
+        "serverInfo" : {
+                "host" : "NCI-01940306",
+                "port" : 27501,
+                "version" : "3.2.6",
+                "gitVersion" : "05552b562c7a0b3143a729aaa0838e558dc49b25"
+        },
+        "ok" : 1
+}
+> db.elegans.getIndexes()
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "name" : "_id_",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "snp" : 1
+                },
+                "name" : "snp_1",
+                "ns" : "snps.elegans"
+        }
+]
+> db.elegans.createIndex({N2:1, mutant:1})
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 2,
+        "numIndexesAfter" : 3,
+        "ok" : 1
+}
+> db.elegans.getIndexes()
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "name" : "_id_",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "snp" : 1
+                },
+                "name" : "snp_1",
+                "ns" : "snps.elegans"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "N2" : 1,
+                        "mutant" : 1
+                },
+                "name" : "N2_1_mutant_1",
+                "ns" : "snps.elegans"
+        }
+]
+> db.elegans.explain("executionStats").find({N2:"T", "mutant":"A"}).limit(5)
+{
+        "queryPlanner" : {
+                "plannerVersion" : 1,
+                "namespace" : "snps.elegans",
+                "indexFilterSet" : false,
+                "parsedQuery" : {
+                        "$and" : [
+                                {
+                                        "N2" : {
+                                                "$eq" : "T"
+                                        }
+                                },
+                                {
+                                        "mutant" : {
+                                                "$eq" : "A"
+                                        }
+                                }
+                        ]
+                },
+                "winningPlan" : {
+                        "stage" : "LIMIT",
+                        "limitAmount" : 5,
+                        "inputStage" : {
+                                "stage" : "FETCH",
+                                "inputStage" : {
+                                        "stage" : "IXSCAN",
+                                        "keyPattern" : {
+                                                "N2" : 1,
+                                                "mutant" : 1
+                                        },
+                                        "indexName" : "N2_1_mutant_1",
+                                        "isMultiKey" : false,
+                                        "isUnique" : false,
+                                        "isSparse" : false,
+                                        "isPartial" : false,
+                                        "indexVersion" : 1,
+                                        "direction" : "forward",
+                                        "indexBounds" : {
+                                                "N2" : [
+                                                        "[\"T\", \"T\"]"
+                                                ],
+                                                "mutant" : [
+                                                        "[\"A\", \"A\"]"
+                                                ]
+                                        }
+                                }
+                        }
+                },
+                "rejectedPlans" : [ ]
+        },
+        "executionStats" : {
+                "executionSuccess" : true,
+                "nReturned" : 5,
+                "executionTimeMillis" : 4,
+                "totalKeysExamined" : 5,
+                "totalDocsExamined" : 5,
+                "executionStages" : {
+                        "stage" : "LIMIT",
+                        "nReturned" : 5,
+                        "executionTimeMillisEstimate" : 0,
+                        "works" : 6,
+                        "advanced" : 5,
+                        "needTime" : 0,
+                        "needYield" : 0,
+                        "saveState" : 0,
+                        "restoreState" : 0,
+                        "isEOF" : 1,
+                        "invalidates" : 0,
+                        "limitAmount" : 5,
+                        "inputStage" : {
+                                "stage" : "FETCH",
+                                "nReturned" : 5,
+                                "executionTimeMillisEstimate" : 0,
+                                "works" : 5,
+                                "advanced" : 5,
+                                "needTime" : 0,
+                                "needYield" : 0,
+                                "saveState" : 0,
+                                "restoreState" : 0,
+                                "isEOF" : 0,
+                                "invalidates" : 0,
+                                "docsExamined" : 5,
+                                "alreadyHasObj" : 0,
+                                "inputStage" : {
+                                        "stage" : "IXSCAN",
+                                        "nReturned" : 5,
+                                        "executionTimeMillisEstimate" : 0,
+                                        "works" : 5,
+                                        "advanced" : 5,
+                                        "needTime" : 0,
+                                        "needYield" : 0,
+                                        "saveState" : 0,
+                                        "restoreState" : 0,
+                                        "isEOF" : 0,
+                                        "invalidates" : 0,
+                                        "keyPattern" : {
+                                                "N2" : 1,
+                                                "mutant" : 1
+                                        },
+                                        "indexName" : "N2_1_mutant_1",
+                                        "isMultiKey" : false,
+                                        "isUnique" : false,
+                                        "isSparse" : false,
+                                        "isPartial" : false,
+                                        "indexVersion" : 1,
+                                        "direction" : "forward",
+                                        "indexBounds" : {
+                                                "N2" : [
+                                                        "[\"T\", \"T\"]"
+                                                ],
+                                                "mutant" : [
+                                                        "[\"A\", \"A\"]"
+                                                ]
+                                        },
+                                        "keysExamined" : 5,
+                                        "dupsTested" : 0,
+                                        "dupsDropped" : 0,
+                                        "seenInvalidated" : 0
+                                }
+                        }
+                }
+        },
+        "serverInfo" : {
+                "host" : "NCI-01940306",
+                "port" : 27501,
+                "version" : "3.2.6",
+                "gitVersion" : "05552b562c7a0b3143a729aaa0838e558dc49b25"
+        },
+        "ok" : 1
+}
+>
